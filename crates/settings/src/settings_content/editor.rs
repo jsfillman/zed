@@ -191,6 +191,9 @@ pub struct EditorSettingsContent {
     ///
     /// Default: [`DocumentColorsRenderMode::Inlay`]
     pub lsp_document_colors: Option<DocumentColorsRenderMode>,
+
+    /// Rainbow brackets settings
+    pub rainbow_brackets: Option<RainbowBracketsContent>,
 }
 
 // Toolbar related settings
@@ -791,4 +794,33 @@ impl Display for MinimumContrast {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{:.1}", self.0)
     }
+}
+
+/// Rainbow brackets settings
+#[skip_serializing_none]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, JsonSchema, MergeFrom, PartialEq)]
+pub struct RainbowBracketsContent {
+    /// Whether rainbow brackets are enabled.
+    ///
+    /// Default: true
+    pub enabled: Option<bool>,
+
+    /// Starting hue for colors (0-360 degrees).
+    /// 0 = red, 120 = green, 240 = blue
+    ///
+    /// Default: 0
+    #[schemars(range(min = 0.0, max = 360.0))]
+    pub start_hue: Option<f32>,
+
+    /// Hue step per nesting level (degrees).
+    /// Determines color change between bracket levels.
+    ///
+    /// Default: 30
+    #[schemars(range(min = 1.0, max = 180.0))]
+    pub hue_step: Option<f32>,
+
+    /// Maximum number of brackets to colorize for performance.
+    ///
+    /// Default: 100000
+    pub max_brackets: Option<u32>,
 }
