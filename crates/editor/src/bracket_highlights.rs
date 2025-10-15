@@ -1,8 +1,9 @@
-use crate::{Editor, RangeToAnchorExt};
-use gpui::{Context, HighlightStyle, Hsla, Window};
+use crate::{editor_settings::EditorSettings, Editor, RangeToAnchorExt};
+use gpui::{Context, HighlightStyle, Hsla, Window, hsla};
 use itertools::Itertools;
 use language::CursorShape;
 use multi_buffer::ToPoint;
+use settings::Settings;
 use text::{Bias, OffsetRangeExt, Point};
 
 enum MatchingBracketHighlight {}
@@ -24,7 +25,17 @@ impl Editor {
         window: &mut Window,
         cx: &mut Context<Editor>,
     ) {
-        const COLORS: [Hsla; 4] = [gpui::red(), gpui::yellow(), gpui::green(), gpui::blue()];
+        let settings = EditorSettings::get_global(cx);
+        let rainbow_settings = &settings.rainbow_brackets;
+
+        if !rainbow_settings.enabled {
+            return;
+        }
+
+        let get_color_for_depth = |depth: usize| -> Hsla {
+            let hue = (rainbow_settings.start_hue + (depth as f32 * rainbow_settings.hue_step)) % 360.0;
+            hsla(hue / 360.0, 0.75, 0.6, 1.0)
+        };
 
         let snapshot = self.snapshot(window, cx);
         let multi_buffer_snapshot = &snapshot.buffer_snapshot;
@@ -74,11 +85,7 @@ impl Editor {
 
         for (depth, bracket_highlights) in dbg!(bracket_matches) {
             let style = HighlightStyle {
-                color: Some({
-                    // todo! these colors lack contrast for this/are not actually good for that?
-                    // cx.theme().accents().color_for_index(depth as u32);
-                    COLORS[depth as usize % COLORS.len()]
-                }),
+                color: Some(get_color_for_depth(depth)),
                 ..HighlightStyle::default()
             };
 
@@ -256,5 +263,47 @@ mod tests {
                 another_test(1, 2, 3);
             }
         "#});
+    }
+
+    #[gpui::test]
+    async fn test_rainbow_bracket_colors_differ_by_depth(cx: &mut gpui::TestAppContext) {
+        init_test(cx, |settings| {
+            settings.rainbow_brackets.enabled = true;
+            settings.rainbow_brackets.start_hue = 0.0;
+            settings.rainbow_brackets.hue_step = 30.0;
+        });
+
+        let get_color_for_depth = |depth: usize| -> Hsla {
+            let hue = (0.0 + (depth as f32 * 30.0)) % 360.0;
+            hsla(hue / 360.0, 0.75, 0.6, 1.0)
+        };
+
+        let color_0 = get_color_for_depth(0);
+        let color_1 = get_color_for_depth(1);
+        let color_2 = get_color_for_depth(2);
+
+        assert_ne!(color_0, color_1, "Depth 0 and 1 should have different colors");
+        assert_ne!(color_1, color_2, "Depth 1 and 2 should have different colors");
+        assert_ne!(color_0, color_2, "Depth 0 and 2 should have different colors");
+    }
+
+    #[gpui::test]
+    async fn test_rainbow_bracket_hue_wraps_at_360(cx: &mut gpui::TestAppContext) {
+        init_test(cx, |settings| {
+            settings.rainbow_brackets.enabled = true;
+            settings.rainbow_brackets.start_hue = 350.0;
+            settings.rainbow_brackets.hue_step = 30.0;
+        });
+
+        let get_color_for_depth = |depth: usize| -> Hsla {
+            let hue = (350.0 + (depth as f32 * 30.0)) % 360.0;
+            hsla(hue / 360.0, 0.75, 0.6, 1.0)
+        };
+
+        let color_0 = get_color_for_depth(0);
+        let color_1 = get_color_for_depth(1);
+
+        assert_eq!(color_0.h, 350.0 / 360.0, "Depth 0 hue should be 350 degrees");
+        assert_eq!(color_1.h, 20.0 / 360.0, "Depth 1 hue should wrap to 20 degrees");
     }
 }
