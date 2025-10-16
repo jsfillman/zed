@@ -14,6 +14,7 @@
 //! If you're looking to improve Vim mode, you should check out Vim crate that wraps Editor and overrides its behavior.
 pub mod actions;
 mod blink_manager;
+mod bracket_highlights;
 mod clangd_ext;
 pub mod code_context_menus;
 pub mod display_map;
@@ -111,6 +112,7 @@ use gpui::{
     UTF16Selection, UnderlineStyle, UniformListScrollHandle, WeakEntity, WeakFocusHandle, Window,
     div, point, prelude::*, pulsating_between, px, relative, size,
 };
+use bracket_highlights::BracketRefreshReason;
 use highlight_matching_bracket::refresh_matching_bracket_highlights;
 use hover_links::{HoverLink, HoveredLinkState, InlayHighlight, find_file};
 use hover_popover::{HoverState, hide_hover};
@@ -3175,6 +3177,7 @@ impl Editor {
             self.refresh_code_actions(window, cx);
             self.refresh_document_highlights(cx);
             self.refresh_selected_text_highlights(false, window, cx);
+            self.refresh_bracket_highlights(BracketRefreshReason::SelectionsChanged, window, cx);
             refresh_matching_bracket_highlights(self, cx);
             self.update_visible_edit_prediction(window, cx);
             self.edit_prediction_requires_modifier_in_indent_conflict = true;
@@ -20858,6 +20861,7 @@ impl Editor {
                 self.refresh_code_actions(window, cx);
                 self.refresh_selected_text_highlights(true, window, cx);
                 self.refresh_single_line_folds(window, cx);
+                self.refresh_bracket_highlights(BracketRefreshReason::BufferEdited, window, cx);
                 refresh_matching_bracket_highlights(self, cx);
                 if self.has_active_edit_prediction() {
                     self.update_visible_edit_prediction(window, cx);

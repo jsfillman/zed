@@ -57,6 +57,7 @@ pub struct EditorSettings {
     pub drag_and_drop_selection: DragAndDropSelection,
     pub lsp_document_colors: DocumentColorsRenderMode,
     pub minimum_contrast_for_highlights: f32,
+    pub rainbow_brackets: RainbowBracketSettings,
 }
 #[derive(Debug, Clone)]
 pub struct Jupyter {
@@ -161,6 +162,15 @@ pub struct SearchSettings {
     pub case_sensitive: bool,
     pub include_ignored: bool,
     pub regex: bool,
+}
+
+/// Rainbow brackets settings
+#[derive(Clone, Debug, PartialEq)]
+pub struct RainbowBracketSettings {
+    pub enabled: bool,
+    pub start_hue: f32,
+    pub hue_step: f32,
+    pub max_brackets: u32,
 }
 
 impl EditorSettings {
@@ -268,6 +278,23 @@ impl Settings for EditorSettings {
             },
             lsp_document_colors: editor.lsp_document_colors.unwrap(),
             minimum_contrast_for_highlights: editor.minimum_contrast_for_highlights.unwrap().0,
+            rainbow_brackets: {
+                if let Some(rb) = editor.rainbow_brackets {
+                    RainbowBracketSettings {
+                        enabled: rb.enabled.unwrap_or(true),
+                        start_hue: rb.start_hue.unwrap_or(0.0),
+                        hue_step: rb.hue_step.unwrap_or(30.0),
+                        max_brackets: rb.max_brackets.unwrap_or(100000),
+                    }
+                } else {
+                    RainbowBracketSettings {
+                        enabled: true,
+                        start_hue: 0.0,
+                        hue_step: 30.0,
+                        max_brackets: 100000,
+                    }
+                }
+            },
         }
     }
 
